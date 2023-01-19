@@ -1,4 +1,4 @@
-// Copyright 2023 Google LLC
+// Copyright 2021 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,17 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {Update, Updater} from 'release-please/build/src/update';
+import {Update} from 'release-please/build/src/update';
 import {VersionsManifest} from 'release-please/build/src/updaters/java/versions-manifest';
 import {Version, VersionsMap} from 'release-please/build/src/version';
 import {Changelog} from 'release-please/build/src/updaters/changelog';
-import {CommitSplit} from 'release-please/build/src/util/commit-split';
-import {CompositeUpdater} from 'release-please/build/src/updaters/composite';
-
 import {GitHubFileContents} from '@google-automations/git-file-utils';
 import {
-  GitHubAPIError,
   MissingRequiredFileError,
+  FileNotFoundError,
 } from 'release-please/build/src/errors';
 import {ConventionalCommit} from 'release-please/build/src/commit';
 import {
@@ -31,7 +28,7 @@ import {
 } from 'release-please/build/src/strategies/java';
 import {JavaUpdate} from 'release-please/build/src/updaters/java/java-update';
 
-export class JavaYoshiMonoRepo extends Java {
+export class JavaYoshi extends Java {
   private versionsContent?: GitHubFileContents;
 
   /**
@@ -79,10 +76,10 @@ export class JavaYoshiMonoRepo extends Java {
           this.targetBranch
         );
       } catch (err) {
-        if (err instanceof GitHubAPIError) {
+        if (err instanceof FileNotFoundError) {
           throw new MissingRequiredFileError(
             this.addPath('versions.txt'),
-            JavaYoshiMonoRepo.name,
+            JavaYoshi.name,
             `${this.repository.owner}/${this.repository.repo}`
           );
         }
@@ -188,52 +185,9 @@ export class JavaYoshiMonoRepo extends Java {
           changelogEntry: options.changelogEntry,
         }),
       });
-
-      // The artifact map maps from directory paths in repo to artifact names on
-      // Maven, e.g, java-secretmanager to com.google.cloud/google-cloud-secretmanager.
-      const artifactMap = await this.getArtifactMap('artifact-map.json');
-      if (artifactMap) {
-        //   const changelogUpdates: Array<Updater> = [];
-        //   const cs = new CommitSplit({
-        //     includeEmpty: false,
-        //   });
-        //   const splitCommits = cs.split(options.commits ?? []);
-        //   for (const path of Object.keys(splitCommits)) {
-        //     if (artifactMap[path]) {
-        //       this.logger.info(`Found artifact ${artifactMap[path]} for ${path}`);
-        //       changelogUpdates.push(
-        //         new ChangelogJson({
-        //           artifactName: artifactMap[path],
-        //           version,
-        //           commits: splitCommits[path],
-        //           language: 'JAVA',
-        //         })
-        //       );
-        //     }
-        //   }
-        //   updates.push({
-        //     path: 'changelog.json',
-        //     createIfMissing: false,
-        //     updater: new CompositeUpdater(...changelogUpdates),
-        //   });
-      }
     }
 
     return updates;
-  }
-
-  private async getArtifactMap(
-    path: string
-  ): Promise<Record<string, string> | null> {
-    try {
-      const content = await this.github.getFileContentsOnBranch(
-        path,
-        this.targetBranch
-      );
-      return JSON.parse(content.parsedContent);
-    } catch (e) {
-      return null;
-    }
   }
 
   protected async updateVersionsMap(
